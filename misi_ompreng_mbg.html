@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Misi Ompreng MBG</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --success: #16a34a;
+            --danger: #dc2626;
+            --poison: #9333ea;
+            --bg: #f8fafc;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            color: #333;
+        }
+        #game-container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+        }
+        h1 {
+            color: var(--primary);
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        .subtitle {
+            font-size: 14px;
+            color: #64748b;
+            margin-bottom: 25px;
+        }
+        #ompreng-display {
+            font-size: 80px;
+            margin: 20px 0;
+            transition: all 0.5s ease;
+            filter: drop-shadow(0 10px 10px rgba(0,0,0,0.1));
+        }
+        .poisoned {
+            filter: hue-rotate(90deg) drop-shadow(0 0 20px var(--poison)) !important;
+            animation: shake 0.5s infinite;
+        }
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1px); }
+            20% { transform: translate(-3px, 0px) rotate(1px); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1px); }
+            50% { transform: translate(-1px, 2px) rotate(-1px); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1px); }
+            80% { transform: translate(-1px, -1px) rotate(1px); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1px); }
+        }
+        #scenario-text {
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 25px;
+            font-weight: 500;
+        }
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            align-items: center;
+        }
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            cursor: pointer;
+            transition: transform 0.1s, opacity 0.2s;
+            font-weight: bold;
+            width: 100%;
+        }
+        button:active {
+            transform: scale(0.98);
+        }
+        .btn-choice {
+            background-color: var(--primary);
+            color: white;
+        }
+        .btn-choice:hover {
+            opacity: 0.9;
+        }
+        .btn-restart {
+            background-color: var(--success);
+            color: white;
+            display: none;
+            margin-top: 20px;
+        }
+        input[type="number"] {
+            width: 80%;
+            padding: 12px;
+            font-size: 18px;
+            border: 2px solid var(--primary);
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        #feedback-msg {
+            margin-top: 20px;
+            font-weight: bold;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+        .text-poison { color: var(--danger); }
+        .text-success { color: var(--success); }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <h1>Misi Ompreng MBG</h1>
+    <div class="subtitle">Jaga integritas, sajikan kualitas!</div>
+    
+    <div id="ompreng-display">🍱</div>
+    
+    <div id="scenario-text">Selamat datang di Dapur Sentral. Anda bersiap memasak untuk program Makan Bergizi Gratis hari ini. Mari kita mulai!</div>
+    
+    <div class="btn-group" id="button-container">
+        <button class="btn-choice" onclick="startGame()">Mulai Simulasi</button>
+    </div>
+
+    <div id="feedback-msg"></div>
+    <button class="btn-restart" id="btn-restart" onclick="resetGame()">Main Lagi</button>
+</div>
+
+<script>
+    const scenarios = [
+        {
+            type: "choice",
+            text: "Tahap 1: Supplier sayur menawarkan nota kosong agar Anda bisa menulis harga sendiri yang lebih tinggi. Apa yang Anda lakukan?",
+            choiceA: { text: "Tolak dan minta nota resmi sesuai harga beli asli.", isCorrupt: false },
+            choiceB: { text: "Terima nota kosong, tulis harga sedikit lebih mahal.", isCorrupt: true }
+        },
+        {
+            type: "input",
+            text: "Tahap 2: Anggaran resmi MBG untuk 1 porsi ompreng adalah Rp 15.000. Anda ditugaskan membelanjakan dana tersebut untuk lauk pauk. Berapa nominal (dalam Rupiah) yang akan Anda belanjakan ke dalam 1 piring ompreng?",
+            expectedValue: 15000,
+            failMsg: "❌ Gagal! Anda memasukkan nominal di bawah Rp 15.000. Selisih dana yang masuk ke kantong pribadi membuat kualitas nutrisi menurun drastis!"
+        },
+        {
+            type: "choice",
+            text: "Tahap 3: Distribusi dimulai. Ada sisa 5 porsi ompreng di dapur yang belum didistribusikan ke anak-anak target.",
+            choiceA: { text: "Bawa pulang sisa ompreng untuk keluarga sendiri.", isCorrupt: true },
+            choiceB: { text: "Segera distribusikan ke anak-anak lain di sekitar yang membutuhkan.", isCorrupt: false }
+        }
+    ];
+
+    let currentStage = 0;
+    const omprengDisplay = document.getElementById('ompreng-display');
+    const scenarioText = document.getElementById('scenario-text');
+    const buttonContainer = document.getElementById('button-container');
+    const feedbackMsg = document.getElementById('feedback-msg');
+    const btnRestart = document.getElementById('btn-restart');
+
+    function startGame() {
+        currentStage = 0;
+        omprengDisplay.className = '';
+        omprengDisplay.innerText = '🍱';
+        feedbackMsg.innerText = '';
+        btnRestart.style.display = 'none';
+        loadScenario();
+    }
+
+    function loadScenario() {
+        if (currentStage < scenarios.length) {
+            const stageData = scenarios[currentStage];
+            scenarioText.innerText = stageData.text;
+            
+            if (stageData.type === "choice") {
+                buttonContainer.innerHTML = `
+                    <button class="btn-choice" onclick="makeDecision(${stageData.choiceA.isCorrupt})">${stageData.choiceA.text}</button>
+                    <button class="btn-choice" onclick="makeDecision(${stageData.choiceB.isCorrupt})">${stageData.choiceB.text}</button>
+                `;
+            } else if (stageData.type === "input") {
+                buttonContainer.innerHTML = `
+                    <input type="number" id="budget-input" placeholder="Misal: 15000" min="0">
+                    <button class="btn-choice" onclick="checkInput()">Konfirmasi Belanja</button>
+                `;
+            }
+        } else {
+            showSuccess();
+        }
+    }
+
+    function checkInput() {
+        const inputVal = parseInt(document.getElementById('budget-input').value);
+        const stageData = scenarios[currentStage];
+        
+        if (isNaN(inputVal) || inputVal < stageData.expectedValue) {
+            showGameover(stageData.failMsg);
+        } else {
+            advanceStage();
+        }
+    }
+
+    function makeDecision(isCorrupt) {
+        if (isCorrupt) {
+            showGameover("❌ Gagal! Keputusan Anda mengandung unsur penyalahgunaan wewenang.");
+        } else {
+            advanceStage();
+        }
+    }
+
+    function advanceStage() {
+        currentStage++;
+        omprengDisplay.innerText = '✨🍱✨'; // Efek bercahaya
+        setTimeout(() => {
+            omprengDisplay.innerText = '🍱';
+            loadScenario();
+        }, 800);
+    }
+
+    function showGameover(customMsg) {
+        omprengDisplay.innerText = '☠️🧪';
+        omprengDisplay.className = 'poisoned';
+        scenarioText.innerText = "OMPRENG PECAH DAN BERACUN!";
+        buttonContainer.innerHTML = '';
+        
+        feedbackMsg.className = 'text-poison';
+        feedbackMsg.innerHTML = `${customMsg}<br><br><strong>Teori Materi:</strong> Ketika kita korupsi, maka makanan yang kita berikan akan beracun. Jangan korupsi, ya!`;
+        
+        btnRestart.style.display = 'block';
+    }
+
+    function showSuccess() {
+        omprengDisplay.innerText = '🏆🍱💖';
+        scenarioText.innerText = "Misi Selesai: Distribusi Sukses!";
+        buttonContainer.innerHTML = '';
+        
+        feedbackMsg.className = 'text-success';
+        feedbackMsg.innerHTML = "✅ Luar biasa! Anda berhasil menjaga integritas. Ompreng sehat bergizi dengan nominal yang tepat berhasil dinikmati tanpa tercemar racun korupsi.";
+        
+        btnRestart.style.display = 'block';
+    }
+
+    function resetGame() {
+        startGame();
+    }
+</script>
+
+</body>
+</html>
